@@ -49,10 +49,24 @@ def main():
 
     print("n-grams inserted successfully")
 
+    # testing
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT * FROM ngrams;")
-    rows = cursor.fetchone()
-    print(rows)
+
+    cursor.execute("SELECT COUNT(*) FROM ngrams;")
+    rows = cursor.fetchone()[0]
+    print(f"Total rows in bigram table: {rows}")
+
+    cursor.execute(
+        """
+        SELECT context, next_word, count 
+        FROM ngrams 
+        ORDER BY count DESC 
+        LIMIT 5;
+        """
+    )
+    print("\n5 most frequent bigrams:")
+    for context, next_word, count in cursor.fetchall():
+        print(f"'{context}' -> '{next_word}': {count}")
 
     conn.close()
 
