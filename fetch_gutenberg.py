@@ -23,17 +23,20 @@ response = requests.get("https://gutendex.com/books", params={"search": "sherloc
 books = response.json()["results"]
 
 book_id = 100
-response = requests.get(
-    f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.txt",
-    timeout=10
-)
-print(response.status_code)
+BOOK_IDS = [1661, 108, 834]
 
 os.makedirs("data", exist_ok=True)
 
-clean_text = strip_gutenberg_boilerplate(response.text)
+for book_id in BOOK_IDS:
+    response = requests.get(
+    f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.txt",
+    timeout=10
+    )
+    print(book_id, response.status_code)
 
-with open(f"data/{book_id}.txt", "w", encoding="utf-8") as f:
-    f.write(clean_text)
+    clean_text = strip_gutenberg_boilerplate(response.text)
 
-print(f"Saved {len(clean_text)} characters to data/{book_id}.txt")
+    with open(f"data/{book_id}.txt", "w", encoding="utf-8") as f:
+        f.write(clean_text)
+
+    print(f"Saved {len(clean_text)} characters to data/{book_id}.txt")
