@@ -56,15 +56,51 @@ def main():
     cursor.execute(
         """
         SELECT context, next_word, count 
-        FROM ngrams 
+        FROM ngrams
+        WHERE n_length = 2
         ORDER BY count DESC 
         LIMIT 5;
         """
     )
-    print("\n5 most frequent n-grams:")
+    print("\nMost frequent 2-gram:")
     for context, next_word, count in cursor.fetchall():
         print(f"'{context}' -> '{next_word}': {count}")
 
+    cursor.execute(
+        """
+        SELECT context, next_word, count 
+        FROM ngrams
+        WHERE n_length = 3
+        ORDER BY count DESC 
+        LIMIT 5;
+        """
+    )
+    print("\nMost frequent 3-gram:")
+    for context, next_word, count in cursor.fetchall():
+        print(f"'{context}' -> '{next_word}': {count}")
+
+    cursor.execute(
+        """
+        SELECT context, next_word, count 
+        FROM ngrams
+        WHERE n_length = 4
+        ORDER BY count DESC 
+        LIMIT 5;
+        """
+    )
+    print("\nMost frequent 4-grams:")
+    for context, next_word, count in cursor.fetchall():
+        print(f"'{context}' -> '{next_word}': {count}")
+
+    # cursor.execute(
+    #     """
+    #     SELECT *
+    #     FROM ngrams
+    #     """
+    # )
+    # print("\nAll n-grams:")
+    # for n_length, context, next_word, count in cursor.fetchall():
+    #     print(f"{n_length}: '{context}' -> '{next_word}': {count}")
 
     cursor.execute(
         """
