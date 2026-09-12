@@ -16,7 +16,9 @@ def load_all_texts(data_folder="data"):
 
 def tokenize(text):
     # Lowercase and split text by words and punctuation.
-    return re.findall(r"\w+(?:'\w+)?|[^\w\s]", text.lower())
+    text = text.replace("_", "")
+    text = re.sub(r"\b\d+\b", "", text)  # remove standalone numbers (line markers)
+    return re.findall(r"\w+(?:'\w+)?|[.,!?;:'\"()\-]", text.lower())
 
 
 def tokenize_all(all_texts):
@@ -29,5 +31,5 @@ if __name__ == "__main__":
     tokenized_texts = tokenize_all(raw_texts)
     for filepath, tokens in tokenized_texts.items():
         print(filepath)
-        print(tokens[:50])
+        print(tokens)
         print("---\n")

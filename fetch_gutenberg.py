@@ -22,8 +22,8 @@ def strip_gutenberg_boilerplate(text):
 response = requests.get("https://gutendex.com/books", params={"search": "sherlock holmes"})
 books = response.json()["results"]
 
-book_id = 100
-BOOK_IDS = [1661, 108, 834]
+
+BOOK_IDS = [100]
 
 os.makedirs("data", exist_ok=True)
 
