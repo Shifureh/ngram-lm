@@ -3,7 +3,7 @@ from collections import Counter
 from preprocess_text import load_all_texts, tokenize_all
 
 
-def generate_ngrams(tokens, n=2):
+def generate_ngrams(tokens, n):
     return [tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
 
 
@@ -37,14 +37,12 @@ def main():
     raw_texts = load_all_texts("data")
     tokenized_texts = tokenize_all(raw_texts)
     conn = init_db("ngrams.db", "schema.sql")
-    # for n in range(2,7):
-    n = 2
-
-    for filepath, tokens in tokenized_texts.items():
-        print(f"Processing {filepath}...")
-        ngrams = generate_ngrams(tokens, n=n)
-        counts = Counter(ngrams)
-        save_ngrams(n, conn, counts)
+    for n in range(2,5):
+        for filepath, tokens in tokenized_texts.items():
+            print(f"Processing {filepath} for {n}-grams...")
+            ngrams = generate_ngrams(tokens, n)
+            counts = Counter(ngrams)
+            save_ngrams(n, conn, counts)
 
     print("n-grams inserted successfully")
 
@@ -53,29 +51,34 @@ def main():
 
     cursor.execute("SELECT COUNT(*) FROM ngrams;")
     rows = cursor.fetchone()[0]
-    print(f"Total rows in bigram table: {rows}")
+    print(f"Total rows in n-gram table: {rows}")
 
     cursor.execute(
         """
         SELECT context, next_word, count 
         FROM ngrams 
         ORDER BY count DESC 
-        LIMIT 1;
+        LIMIT 5;
         """
     )
-    print("\nMost frequent bigrams:")
+    print("\n5 most frequent n-grams:")
     for context, next_word, count in cursor.fetchall():
         print(f"'{context}' -> '{next_word}': {count}")
 
+
     cursor.execute(
         """
-        SELECT *
+        SELECT n_length, COUNT(*) AS unique_contexts, AVG(count) AS avg_count
         FROM ngrams
+        GROUP BY n_length;
         """
     )
-    print("\nAll bigrams:")
-    for n_length, context, next_word, count in cursor.fetchall():
-        print(f"{n_length}: '{context}' -> '{next_word}': {count}")
+    print("\nSummary of n-grams:")
+    for n_length, unique_contexts, avg_count in cursor.fetchall():
+        print(
+            f"{n_length}-grams: {unique_contexts} unique contexts, average count: {avg_count:.2f}"
+        )
+
 
     cursor.execute(
         """
@@ -84,7 +87,7 @@ def main():
     )
 
     total_count = cursor.fetchone()[0]
-    print(f"\nTotal count of all bigrams: {total_count}")
+    print(f"\nTotal count of all n-grams: {total_count}")
 
 
     conn.close()
