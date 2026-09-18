@@ -1,5 +1,6 @@
 import sqlite3
 import random
+import re
 
 conn = sqlite3.connect("ngrams.db")
 cursor = conn.cursor()
@@ -11,6 +12,10 @@ def get_probabilities(context, n_length):
     cursor.execute("SELECT next_word, count FROM ngrams WHERE context = ? AND n_length = ?", (context, n_length))
     all_rows = cursor.fetchall()
 
+    # if nothing exists
+    if not all_rows:
+        return {}
+
     for row in all_rows:
         total_count += row[1]
 
@@ -21,10 +26,11 @@ def get_probabilities(context, n_length):
 
     return next_word_probablities
 
-def generate_next_word(probabilites, sampled_num):
+def generate_next_word(probabilites, sampled_num, context_input_list):
 
     word_list = []
     probabilities_list = []
+    new_context_list = []
 
     # separates the dictionary into separate word and probabilities list
     for key, value in probabilites.items():
@@ -39,36 +45,125 @@ def generate_next_word(probabilites, sampled_num):
         current_range[1] = current_range[1] + probability
 
         if sampled_num > current_range[0] and sampled_num < current_range[1]:
-            return word_list[count], count, current_range # count & range for testing
+            new_context_list = update_context(context_input_list, word_list[count])
+            return word_list[count], count, current_range, new_context_list # count & range for testing
 
         count += 1
 
-    return word_list[count], count, current_range # count & range for testing
+    return word_list[count], count, current_range, new_context_list # count & range for testing
+
+# updates the current context input list with the newly generated word
+def update_context(context_input_list, new_word):
+
+    temp_list = context_input_list
+    context_length = len(context_input_list)
+    context_input_list = [None] * context_length
+
+    count = 0
+    for item in temp_list:
+
+        if (count == context_length - 1):
+            context_input_list[count] = new_word
+        else: 
+            context_input_list[count] = temp_list[count + 1]
+        
+        count += 1
+
+    return context_input_list
+
+MAX_WORDS = 5
+
+# gets starting context with error handling
+while True:
+    try:
+        context_input = input("Enter up to 3 words to start generating: ")
+        context_input_list = re.findall(r"\w+(?:'\w+)?|[.,]", context_input.lower())
+        if len(context_input_list) > 3:
+            print("Too many words, try again.")
+        else:
+            break
+    except ValueError:
+        print("Invalid Input, try again")
 
 
-# context given by user input
-context_input = input("Enter two words to start generating: ")
-context_input = context_input.lower()
+# gets n-length gram
+n_length = 1
+for token in context_input_list:
+    n_length += 1
 
-# gets probabilites based on the current context
-n_length = 3 # 3-gram
-probabilities = get_probabilities(context_input, n_length)
-sampled_num = random.random()
+generated_sentence_list = list(context_input_list)   # full growing output
+current_context_list = list(context_input_list)      # fixed-size sliding window
 
-next_word = ""
-next_word_index = 0 # testing
-curr_range = [] # testing
-next_word, next_word_index, curr_range = generate_next_word(probabilities, sampled_num)
+has_period = False
+
+while len(generated_sentence_list) < MAX_WORDS and not has_period:
+
+    context_string = " ".join(current_context_list)
+    probabilities = get_probabilities(context_string, n_length)
+
+    if not probabilities:
+        print("No data found for this context. Try a different phrase.")
+        break
+    else:
+        sampled_num = random.random()
+        next_word, next_word_index, curr_range, new_context_list = generate_next_word(probabilities, sampled_num, current_context_list)
+
+        generated_sentence_list.append(next_word)
+        current_context_list = new_context_list
+
+        if next_word == ".":
+            has_period = True
+
+
+print(" ".join(generated_sentence_list))
+
+
+# # first round of generation
+# context_string = " ".join(context_input_list)
+# probabilities = get_probabilities(context_string, n_length)
+
+# if not probabilities:
+#     print("No data found for this context. Try a different phrase.")
+# else:
+#     sampled_num = random.random()
+#     next_word = ""
+#     next_word_index = 0 # testing
+#     curr_range = [] # testing
+#     new_context_list = []
+#     next_word, next_word_index, curr_range, new_context_list = generate_next_word(probabilities, sampled_num, context_input_list)
+#     generated_sentence_list.append(next_word)
+#     print(new_context_list)
+
+
+
+
+
+
+
+
+
+
+
 
 # testing
-count = 0
-for key, value in probabilities.items():
-    print(f"{count}: {key}") 
-    count += 1
+# for key, value in probabilities.items():
+#     print(key, value)
 
-print("the next word is: " + next_word)
-print(f"word index: {next_word_index}")
-print(f"sampleded num: {sampled_num}")
-print(f"range: {curr_range}")
+# sampled_num = random.random()
+# next_word = ""
+# next_word_index = 0 # testing
+# curr_range = [] # testing
+# next_word, next_word_index, curr_range = generate_next_word(probabilities, sampled_num)
+
+# # testing
+# count = 0
+# for key, value in probabilities.items():
+#     print(f"{count}: {key}") 
+#     count += 1
+
+# print("the next word is: " + next_word)
+# print(f"word index: {next_word_index}")
+# print(f"sampleded num: {sampled_num}")
+# print(f"range: {curr_range}")
 
     
