@@ -18,7 +18,7 @@ def tokenize(text):
     # Lowercase and split text by words and punctuation.
     text = text.replace("_", "")
     text = re.sub(r"\b\d+\b", "", text)  # remove standalone numbers (line markers)
-    return re.findall(r"\w+(?:'\w+)?|[.,!?;:'\"()\-]", text.lower())
+    return re.findall(r"\w+(?:'\w+)?|[.,]", text.lower())
 
 
 def tokenize_all(all_texts):
