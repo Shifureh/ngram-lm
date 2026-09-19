@@ -16,10 +16,6 @@ def get_probabilities(context, n_length):
     cursor.execute("SELECT next_word, count FROM ngrams WHERE context = ? AND n_length = ?", (context, n_length))
     all_rows = cursor.fetchall()
 
-    # if nothing exists return empty dictionary
-    if not all_rows:
-        return {}
-
     for row in all_rows:
         total_count += row[1]
 
@@ -27,6 +23,17 @@ def get_probabilities(context, n_length):
         next_word = row[0]
         count = row[1]
         next_word_probablities[next_word] = count/total_count
+
+    if (n_length <= 1):
+        return {}
+    
+    # if nothing exists return empty dictionary
+    if not all_rows:
+        context_list = context.split(" ")
+        context_list.pop(0)
+
+        context_string = " ".join(context_list)
+        next_word_probablities = get_probabilities(context_string, n_length - 1)
 
     return next_word_probablities
 
@@ -126,7 +133,7 @@ while len(generated_sentence_list) < MAX_WORDS and not has_period:
     smaller_sorted_probabilities = apply_p_word_sampling(probabilities, P_WORD_LIMIT)
 
     if not probabilities:
-        print("No data found for this context. Try a different phrase.")
+        print("No data found. Try a different phrase.")
         break
     else:
         sampled_num = random.random()
