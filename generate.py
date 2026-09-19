@@ -1,9 +1,13 @@
 import sqlite3
+from operator import itemgetter
 import random
 import re
 
 conn = sqlite3.connect("ngrams.db")
 cursor = conn.cursor()
+
+MAX_WORDS = 7
+P_WORD_LIMIT = 0.9
 
 def get_probabilities(context, n_length):
 
@@ -12,7 +16,7 @@ def get_probabilities(context, n_length):
     cursor.execute("SELECT next_word, count FROM ngrams WHERE context = ? AND n_length = ?", (context, n_length))
     all_rows = cursor.fetchall()
 
-    # if nothing exists
+    # if nothing exists return empty dictionary
     if not all_rows:
         return {}
 
@@ -25,6 +29,26 @@ def get_probabilities(context, n_length):
         next_word_probablities[next_word] = count/total_count
 
     return next_word_probablities
+
+def apply_p_word_sampling(next_word_probablities, limit):
+
+    # sorts values greatest to smallest
+    sorted_probabilities = dict(sorted(next_word_probablities.items(), key=itemgetter(1), reverse=True))
+    smaller_probabilities = {}
+
+    sum = 0
+    for (key, value) in sorted_probabilities.items():
+        if (sum >= limit):
+            break
+        else: 
+            sum = sum + value
+            smaller_probabilities.update({key: value})
+
+    # renormalized data by the current "total"
+    for (key, value) in smaller_probabilities.items():
+        smaller_probabilities.update({key: value / sum})
+
+    return smaller_probabilities
 
 def generate_next_word(probabilites, sampled_num, context_input_list):
 
@@ -71,7 +95,6 @@ def update_context(context_input_list, new_word):
 
     return context_input_list
 
-MAX_WORDS = 5
 
 # gets starting context with error handling
 while True:
@@ -100,13 +123,14 @@ while len(generated_sentence_list) < MAX_WORDS and not has_period:
 
     context_string = " ".join(current_context_list)
     probabilities = get_probabilities(context_string, n_length)
+    smaller_sorted_probabilities = apply_p_word_sampling(probabilities, P_WORD_LIMIT)
 
     if not probabilities:
         print("No data found for this context. Try a different phrase.")
         break
     else:
         sampled_num = random.random()
-        next_word, next_word_index, curr_range, new_context_list = generate_next_word(probabilities, sampled_num, current_context_list)
+        next_word, next_word_index, curr_range, new_context_list = generate_next_word(smaller_sorted_probabilities, sampled_num, current_context_list)
 
         generated_sentence_list.append(next_word)
         current_context_list = new_context_list
