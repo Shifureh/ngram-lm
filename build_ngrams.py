@@ -1,6 +1,7 @@
 import sqlite3
 from collections import Counter
 from preprocess_text import load_all_texts, tokenize_all
+from fetch_gutenberg import fetch_all_books
 
 
 def generate_ngrams(tokens, n):
@@ -34,6 +35,7 @@ def save_ngrams(n, conn, ngram_counts):
 
 
 def main():
+    fetch_all_books()
     raw_texts = load_all_texts("data")
     tokenized_texts = tokenize_all(raw_texts)
     conn = init_db("ngrams.db", "schema.sql")
