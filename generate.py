@@ -9,7 +9,14 @@ cursor = conn.cursor()
 MAX_WORDS = 7
 P_WORD_LIMIT = 0.9
 
+# interpolation weights
+
+FOUR_GRAM_ITP_WEIGHT = 0.70
+THREE_GRAM_ITP_WEIGHT = 0.20
+TWO_GRAM_ITP_WEIGHT = 0.10
+
 def get_probabilities(context, n_length):
+    # print(context + " " + str(n_length))
 
     total_count = 0
     next_word_probablities = {}
@@ -26,16 +33,38 @@ def get_probabilities(context, n_length):
 
     if (n_length <= 1):
         return {}
-    
-    # if nothing exists return empty dictionary
-    if not all_rows:
-        context_list = context.split(" ")
-        context_list.pop(0)
-
-        context_string = " ".join(context_list)
-        next_word_probablities = get_probabilities(context_string, n_length - 1)
+        
 
     return next_word_probablities
+
+def interpolated_probability(context):
+
+    next_word_probabilities = {}
+
+    FOUR_GRAM_PROBABILITIES = get_probabilities(context, 4)
+
+    context_list = context.split(" ")
+    context_list.pop(0)
+    context_string = " ".join(context_list)
+
+    THREE_GRAM_PROBABILITIES = get_probabilities(context_string, 3)
+
+    context_list = context_string.split(" ")
+    context_list.pop(0)
+    context_string = " ".join(context_list)
+
+    TWO_GRAM_PROBABILITIES = get_probabilities(context_string, 2)
+
+    all_candidates = set(FOUR_GRAM_PROBABILITIES) | set(THREE_GRAM_PROBABILITIES) | set(TWO_GRAM_PROBABILITIES)
+
+    for key in all_candidates:
+        next_word_probabilities[key] = (
+            FOUR_GRAM_ITP_WEIGHT * FOUR_GRAM_PROBABILITIES.get(key, 0)
+            + THREE_GRAM_ITP_WEIGHT * THREE_GRAM_PROBABILITIES.get(key, 0)
+            + TWO_GRAM_ITP_WEIGHT * TWO_GRAM_PROBABILITIES.get(key, 0)
+        )
+
+    return next_word_probabilities
 
 def apply_p_word_sampling(next_word_probablities, limit):
 
@@ -129,7 +158,7 @@ has_period = False
 while len(generated_sentence_list) < MAX_WORDS and not has_period:
 
     context_string = " ".join(current_context_list)
-    probabilities = get_probabilities(context_string, n_length)
+    probabilities = interpolated_probability(context_string)
     smaller_sorted_probabilities = apply_p_word_sampling(probabilities, P_WORD_LIMIT)
 
     if not probabilities:
@@ -145,56 +174,6 @@ while len(generated_sentence_list) < MAX_WORDS and not has_period:
         if next_word == ".":
             has_period = True
 
-
-print(" ".join(generated_sentence_list))
-
-
-# # first round of generation
-# context_string = " ".join(context_input_list)
-# probabilities = get_probabilities(context_string, n_length)
-
-# if not probabilities:
-#     print("No data found for this context. Try a different phrase.")
-# else:
-#     sampled_num = random.random()
-#     next_word = ""
-#     next_word_index = 0 # testing
-#     curr_range = [] # testing
-#     new_context_list = []
-#     next_word, next_word_index, curr_range, new_context_list = generate_next_word(probabilities, sampled_num, context_input_list)
-#     generated_sentence_list.append(next_word)
-#     print(new_context_list)
-
-
-
-
-
-
-
-
-
-
-
-
-# testing
-# for key, value in probabilities.items():
-#     print(key, value)
-
-# sampled_num = random.random()
-# next_word = ""
-# next_word_index = 0 # testing
-# curr_range = [] # testing
-# next_word, next_word_index, curr_range = generate_next_word(probabilities, sampled_num)
-
-# # testing
-# count = 0
-# for key, value in probabilities.items():
-#     print(f"{count}: {key}") 
-#     count += 1
-
-# print("the next word is: " + next_word)
-# print(f"word index: {next_word_index}")
-# print(f"sampleded num: {sampled_num}")
-# print(f"range: {curr_range}")
-
-    
+sentence = " ".join(generated_sentence_list)
+sentence = re.sub(r"\s+([,.])", r"\1", sentence)
+print(sentence)
