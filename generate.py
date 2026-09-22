@@ -37,23 +37,37 @@ def get_probabilities(context, n_length):
 
     return next_word_probablities
 
+
 def interpolated_probability(context):
 
     next_word_probabilities = {}
-
-    FOUR_GRAM_PROBABILITIES = get_probabilities(context, 4)
-
     context_list = context.split(" ")
-    context_list.pop(0)
-    context_string = " ".join(context_list)
+    context_length = len(context_list)    
 
-    THREE_GRAM_PROBABILITIES = get_probabilities(context_string, 3)
+    FOUR_GRAM_PROBABILITIES = {}
+    THREE_GRAM_PROBABILITIES = {}
+    TWO_GRAM_PROBABILITIES = {}
 
-    context_list = context_string.split(" ")
-    context_list.pop(0)
-    context_string = " ".join(context_list)
 
-    TWO_GRAM_PROBABILITIES = get_probabilities(context_string, 2)
+    if context_length == 3:
+        four_gram_context = " ".join(context_list[-3:])
+        # print(f"4-gram context is: {four_gram_context}")
+        FOUR_GRAM_PROBABILITIES = get_probabilities(four_gram_context, 4)
+        if not FOUR_GRAM_PROBABILITIES:
+            context_length -= 1
+
+    if context_length == 2:
+        three_gram_context = " ".join(context_list[-2:])
+        # print(f"3-gram context is: {three_gram_context}")
+        THREE_GRAM_PROBABILITIES = get_probabilities(three_gram_context, 3)
+        if not THREE_GRAM_PROBABILITIES:
+            context_length -= 1
+
+    if context_length == 1:
+        two_gram_context = " ".join(context_list[-1:])
+        # print(f"2-gram context is: {two_gram_context}")
+        TWO_GRAM_PROBABILITIES = get_probabilities(two_gram_context, 2)
+    
 
     all_candidates = set(FOUR_GRAM_PROBABILITIES) | set(THREE_GRAM_PROBABILITIES) | set(TWO_GRAM_PROBABILITIES)
 
@@ -65,6 +79,7 @@ def interpolated_probability(context):
         )
 
     return next_word_probabilities
+
 
 def apply_p_word_sampling(next_word_probablities, limit):
 
@@ -161,7 +176,7 @@ while len(generated_sentence_list) < MAX_WORDS and not has_period:
     probabilities = interpolated_probability(context_string)
     smaller_sorted_probabilities = apply_p_word_sampling(probabilities, P_WORD_LIMIT)
 
-    if not probabilities:
+    if not smaller_sorted_probabilities:
         print("No data found. Try a different phrase.")
         break
     else:
