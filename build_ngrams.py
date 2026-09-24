@@ -5,11 +5,19 @@ from fetch_gutenberg import fetch_all_books
 
 
 def generate_ngrams(tokens, n):
-    return [tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
-
+    for i in range(len(tokens) - n + 1):
+        yield tuple(tokens[i : i + n])
+    
 
 def init_db(db_path="ngrams.db", schema_path="schema.sql"):
     conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA synchronous = OFF;")
+    cursor.execute("PRAGMA journal_mode = MEMORY;")
+    cursor.execute("PRAGMA cache_size = 100000;")
+    cursor.execute("PRAGMA temp_store = MEMORY;")
+
     with open(schema_path, "r", encoding="utf-8") as f:
         conn.cursor().executescript(f.read())
     conn.commit()
@@ -40,16 +48,18 @@ def main():
     tokenized_texts = tokenize_all(raw_texts)
     conn = init_db("ngrams.db", "schema.sql")
     for n in range(2,5):
+        total_count_mem = Counter()
         for filepath, tokens in tokenized_texts.items():
             print(f"Processing {filepath} for {n}-grams...")
-            ngrams = generate_ngrams(tokens, n)
-            counts = Counter(ngrams)
-            save_ngrams(n, conn, counts)
+            total_count_mem.update(generate_ngrams(tokens, n))
+        save_ngrams(n, conn, total_count_mem)
 
     print("n-grams inserted successfully")
 
     # testing
     cursor = conn.cursor()
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_n_length ON ngrams(n_length);")
+    conn.commit()
 
     cursor.execute("SELECT COUNT(*) FROM ngrams;")
     rows = cursor.fetchone()[0]
