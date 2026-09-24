@@ -54,5 +54,5 @@ Comparison of n-gram vs. neural next-word prediction — coming soon.
 
 ## Team
 - Shifatul Gani — data pipeline, database schema, generation logic (interpolation, sampling)
-- Arabi Sayed —
-- Tahseen Ullah —
+- Arabi Sayed — generation logic (probability & word generation, top-p (nucleus) sampling), program optimization
+- Tahseen Ullah — data pipeline, database schema, data querying, program optimization
