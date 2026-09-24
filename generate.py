@@ -1,12 +1,14 @@
 import sqlite3
+import string
 from operator import itemgetter
 import random
 import re
+import time
 
 conn = sqlite3.connect("ngrams.db")
 cursor = conn.cursor()
 
-MAX_WORDS = 7
+MAX_WORDS = 50
 P_WORD_LIMIT = 0.9
 
 # interpolation weights
@@ -171,6 +173,7 @@ current_context_list = list(context_input_list)      # fixed-size sliding window
 has_period = False
 
 while len(generated_sentence_list) < MAX_WORDS and not has_period:
+    punct_spacing = " "
 
     context_string = " ".join(current_context_list)
     probabilities = interpolated_probability(context_string)
@@ -182,13 +185,16 @@ while len(generated_sentence_list) < MAX_WORDS and not has_period:
     else:
         sampled_num = random.random()
         next_word, next_word_index, curr_range, new_context_list = generate_next_word(smaller_sorted_probabilities, sampled_num, current_context_list)
-
+        if next_word in string.punctuation:
+            punct_spacing = ""
+        print(punct_spacing + next_word, end="", flush=True)        
+        time.sleep(0.125)
         generated_sentence_list.append(next_word)
         current_context_list = new_context_list
 
         if next_word == ".":
             has_period = True
 
-sentence = " ".join(generated_sentence_list)
-sentence = re.sub(r"\s+([,.])", r"\1", sentence)
-print(sentence)
+# sentence = " ".join(generated_sentence_list)
+# sentence = re.sub(r"\s+([,.])", r"\1", sentence)
+# print(sentence)
