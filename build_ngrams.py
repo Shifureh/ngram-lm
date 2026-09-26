@@ -58,51 +58,27 @@ def main():
 
     # testing
     cursor = conn.cursor()
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_n_length ON ngrams(n_length);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_n_length ON ngrams(n_length, count DESC);")
     conn.commit()
 
     cursor.execute("SELECT COUNT(*) FROM ngrams;")
     rows = cursor.fetchone()[0]
     print(f"Total rows in n-gram table: {rows}")
 
-    cursor.execute(
-        """
-        SELECT context, next_word, count 
-        FROM ngrams
-        WHERE n_length = 2
-        ORDER BY count DESC 
-        LIMIT 5;
-        """
-    )
-    print("\nMost frequent 2-gram:")
-    for context, next_word, count in cursor.fetchall():
-        print(f"'{context}' -> '{next_word}': {count}")
-
-    cursor.execute(
-        """
-        SELECT context, next_word, count 
-        FROM ngrams
-        WHERE n_length = 3
-        ORDER BY count DESC 
-        LIMIT 5;
-        """
-    )
-    print("\nMost frequent 3-gram:")
-    for context, next_word, count in cursor.fetchall():
-        print(f"'{context}' -> '{next_word}': {count}")
-
-    cursor.execute(
-        """
-        SELECT context, next_word, count 
-        FROM ngrams
-        WHERE n_length = 4
-        ORDER BY count DESC 
-        LIMIT 5;
-        """
-    )
-    print("\nMost frequent 4-grams:")
-    for context, next_word, count in cursor.fetchall():
-        print(f"'{context}' -> '{next_word}': {count}")
+    for n in (2, 3, 4):
+        cursor.execute(
+            """
+            SELECT context, next_word, count 
+            FROM ngrams
+            WHERE n_length = ?
+            ORDER BY count DESC
+            LIMIT 5;
+            """,
+            (n,),
+        )
+        print(f"\nMost frequent {n}-gram:")
+        for context, next_word, count in cursor.fetchall():
+            print(f"'{context}' -> '{next_word}': {count}")
 
     # cursor.execute(
     #     """
@@ -116,7 +92,7 @@ def main():
 
     cursor.execute(
         """
-        SELECT n_length, COUNT(*) AS unique_contexts, AVG(count) AS avg_count
+        SELECT n_length, COUNT(*), AVG(count)
         FROM ngrams
         GROUP BY n_length;
         """
@@ -128,11 +104,7 @@ def main():
         )
 
 
-    cursor.execute(
-        """
-        SELECT SUM(COUNT) FROM ngrams;
-        """
-    )
+    cursor.execute("SELECT SUM(COUNT) FROM ngrams;")
 
     total_count = cursor.fetchone()[0]
     print(f"\nTotal count of all n-grams: {total_count}")
