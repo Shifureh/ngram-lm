@@ -24,21 +24,22 @@ def init_db(db_path="ngrams.db", schema_path="schema.sql"):
     return conn
 
 
-def save_ngrams(n, conn, ngram_counts):
-    records = [
-        (n, " ".join(ngram[:-1]), ngram[-1], count)
-        for ngram, count in ngram_counts.items()
-    ]
+def save_ngrams(n, conn, ngram_counts, batch_size=250_000):
     cursor = conn.cursor()
-    cursor.executemany(
-        """
-        INSERT INTO ngrams (n_length, context, next_word, count)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(n_length,context, next_word) 
-        DO UPDATE SET count = count + excluded.count
-        """,
-        records,
-    )
+    insert_sql = "INSERT INTO ngrams (n_length, context, next_word, count) VALUES (?, ?, ?, ?);"
+    
+    cursor.execute("BEGIN TRANSACTION;")
+    batch = []
+    for ngram, count in ngram_counts.items():
+        batch.append((n, " ".join(ngram[:-1]), ngram[-1], count))
+        if len(batch) >= batch_size:
+            cursor.executemany(insert_sql, batch)
+            batch.clear()
+
+    if batch:
+        cursor.executemany(insert_sql, batch)
+        batch.clear()
+        
     conn.commit()
 
 
@@ -58,12 +59,12 @@ def main():
 
     # testing
     cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode = WAL;")
+    cursor.execute("PRAGMA cache_size = -128000;")
+    cursor.execute("PRAGMA temp_store = FILE;")
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_n_length ON ngrams(n_length, count DESC);")
     conn.commit()
-
-    cursor.execute("SELECT COUNT(*) FROM ngrams;")
-    rows = cursor.fetchone()[0]
-    print(f"Total rows in n-gram table: {rows}")
 
     for n in (2, 3, 4):
         cursor.execute(
@@ -76,39 +77,34 @@ def main():
             """,
             (n,),
         )
-        print(f"\nMost frequent {n}-gram:")
+        print(f"\nMost frequent {n}-grams:")
         for context, next_word, count in cursor.fetchall():
-            print(f"'{context}' -> '{next_word}': {count}")
-
-    # cursor.execute(
-    #     """
-    #     SELECT *
-    #     FROM ngrams
-    #     """
-    # )
-    # print("\nAll n-grams:")
-    # for n_length, context, next_word, count in cursor.fetchall():
-    #     print(f"{n_length}: '{context}' -> '{next_word}': {count}")
+            print(f"'{context}' -> '{next_word}': {count:,}")
 
     cursor.execute(
         """
-        SELECT n_length, COUNT(*), AVG(count)
+        SELECT 
+            n_length, 
+            COUNT(*) AS unique_contexts, 
+            AVG(count) AS avg_count,
+            SUM(count) AS total_count
         FROM ngrams
         GROUP BY n_length;
         """
     )
+    summary_rows = cursor.fetchall()
+    
+    total_unique_rows = sum(r[1] for r in summary_rows)
+    total_token_occurrences = sum(r[3] for r in summary_rows)
+
     print("\nSummary of n-grams:")
-    for n_length, unique_contexts, avg_count in cursor.fetchall():
+    for n_length, unique_contexts, avg_count, _ in summary_rows:
         print(
-            f"{n_length}-grams: {unique_contexts} unique contexts, average count: {avg_count:.2f}"
+            f"{n_length}-grams: {unique_contexts:,} unique contexts, average count: {avg_count:.2f}"
         )
 
-
-    cursor.execute("SELECT SUM(COUNT) FROM ngrams;")
-
-    total_count = cursor.fetchone()[0]
-    print(f"\nTotal count of all n-grams: {total_count}")
-
+    print(f"\nTotal rows in n-gram table: {total_unique_rows:,}")
+    print(f"Total count of all n-grams: {total_token_occurrences:,}")
 
     conn.close()
 
