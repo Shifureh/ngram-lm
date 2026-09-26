@@ -15,7 +15,7 @@ def init_db(db_path="ngrams.db", schema_path="schema.sql"):
 
     cursor.execute("PRAGMA synchronous = OFF;")
     cursor.execute("PRAGMA journal_mode = MEMORY;")
-    cursor.execute("PRAGMA cache_size = 100000;")
+    cursor.execute("PRAGMA cache_size = 200000;")
     cursor.execute("PRAGMA temp_store = MEMORY;")
 
     with open(schema_path, "r", encoding="utf-8") as f:
@@ -59,11 +59,11 @@ def main():
 
     # testing
     cursor = conn.cursor()
+    cursor.execute("PRAGMA threads = 4;")
     cursor.execute("PRAGMA journal_mode = WAL;")
     cursor.execute("PRAGMA cache_size = -128000;")
     cursor.execute("PRAGMA temp_store = FILE;")
-
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_n_length ON ngrams(n_length, count DESC);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_context ON ngrams(context, n_length, count DESC);")
     conn.commit()
 
     for n in (2, 3, 4):
