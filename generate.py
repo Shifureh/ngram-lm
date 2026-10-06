@@ -55,15 +55,13 @@ def interpolated_probability(context):
         four_gram_context = " ".join(context_list[-3:])
         # print(f"4-gram context is: {four_gram_context}")
         FOUR_GRAM_PROBABILITIES = get_probabilities(four_gram_context, 4)
-        if not FOUR_GRAM_PROBABILITIES:
-            context_length -= 1
+        context_length -= 1
 
     if context_length == 2:
         three_gram_context = " ".join(context_list[-2:])
         # print(f"3-gram context is: {three_gram_context}")
         THREE_GRAM_PROBABILITIES = get_probabilities(three_gram_context, 3)
-        if not THREE_GRAM_PROBABILITIES:
-            context_length -= 1
+        context_length -= 1
 
     if context_length == 1:
         two_gram_context = " ".join(context_list[-1:])
@@ -188,7 +186,7 @@ while len(generated_sentence_list) < MAX_WORDS and not has_period:
         if next_word in string.punctuation:
             punct_spacing = ""
         print(punct_spacing + next_word, end="", flush=True)        
-        time.sleep(0.125)
+        time.sleep(0.062)
         generated_sentence_list.append(next_word)
         current_context_list = new_context_list
 

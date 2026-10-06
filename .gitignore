@@ -221,12 +221,13 @@ __marimo__/
 *.db
 *.sqlite
 *.sqlite3
-*.db-shm
-*.db-wal
 
 # macOS
 .DS_Store
 
-#
-neural/*.json
-neural/*.pt
+# SQLite WAL files
+*.db-shm
+*.db-wal
+
+# Neural model generated files
+neural/vocab.json
