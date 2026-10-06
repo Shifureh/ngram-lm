@@ -26,9 +26,9 @@ Average n-gram count across the final 40-book corpus:
 
 | n | unique contexts | average count |
 |---|---|---|
-| 2 | 1,234,307 | 5.91 |
-| 3 | 3,848,332 | 1.90 |
-| 4 | 6,004,332 | 1.22 |
+| 2 | 2,631,244 | 7.64 |
+| 3 | 9,249,544 | 2.17 |
+| 4 | 15,565,572 | 1.29 |
 
 Even at this corpus scale, 4-gram contexts remain dominated by singleton occurrences (avg. count 1.22), demonstrating a core limitation of n-gram models regardless of data volume. This is what motivates the use of a neural model approach seen below.
 
