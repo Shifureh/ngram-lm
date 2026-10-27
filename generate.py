@@ -8,7 +8,7 @@ import time
 conn = sqlite3.connect("ngrams.db")
 cursor = conn.cursor()
 
-MAX_WORDS = 50
+MAX_WORDS = 15
 P_WORD_LIMIT = 0.9
 
 # interpolation weights
@@ -78,7 +78,12 @@ def interpolated_probability(context):
             + TWO_GRAM_ITP_WEIGHT * TWO_GRAM_PROBABILITIES.get(key, 0)
         )
 
-    return next_word_probabilities
+    # renormalization of interpolated data
+    total = sum(next_word_probabilities.values())
+    if total == 0:
+        return {}
+
+    return {word: p / total for word, p in next_word_probabilities.items()}
 
 
 def apply_p_word_sampling(next_word_probablities, limit):
@@ -147,51 +152,55 @@ def update_context(context_input_list, new_word):
     return context_input_list
 
 
-# gets starting context with error handling
-while True:
-    try:
-        context_input = input("Enter up to 3 words to start generating: ")
-        context_input_list = re.findall(r"\w+(?:'\w+)?|[.,]", context_input.lower())
-        if len(context_input_list) > 3:
-            print("Too many words, try again.")
-        else:
+def main():
+    # gets starting context with error handling
+    while True:
+        try:
+            context_input = input("Enter up to 3 words to start generating: ")
+            context_input_list = re.findall(r"\w+(?:'\w+)?|[.,]", context_input.lower())
+            if len(context_input_list) > 3:
+                print("Too many words, try again.")
+            else:
+                break
+        except ValueError:
+            print("Invalid Input, try again")
+
+
+    # gets n-length gram
+    n_length = 1
+    for token in context_input_list:
+        n_length += 1
+
+    generated_sentence_list = list(context_input_list)   # full growing output
+    current_context_list = list(context_input_list)      # fixed-size sliding window
+
+    has_period = False
+
+    while len(generated_sentence_list) < MAX_WORDS and not has_period:
+        punct_spacing = " "
+
+        context_string = " ".join(current_context_list)
+        probabilities = interpolated_probability(context_string)
+        smaller_sorted_probabilities = apply_p_word_sampling(probabilities, P_WORD_LIMIT)
+
+        if not smaller_sorted_probabilities:
+            print("No data found. Try a different phrase.")
             break
-    except ValueError:
-        print("Invalid Input, try again")
+        else:
+            sampled_num = random.random()
+            next_word, next_word_index, curr_range, new_context_list = generate_next_word(smaller_sorted_probabilities, sampled_num, current_context_list)
+            if next_word in string.punctuation:
+                punct_spacing = ""
+            print(punct_spacing + next_word, end="", flush=True)        
+            time.sleep(0.062)
+            generated_sentence_list.append(next_word)
+            current_context_list = new_context_list
 
+            if next_word == ".":
+                has_period = True
 
-# gets n-length gram
-n_length = 1
-for token in context_input_list:
-    n_length += 1
-
-generated_sentence_list = list(context_input_list)   # full growing output
-current_context_list = list(context_input_list)      # fixed-size sliding window
-
-has_period = False
-
-while len(generated_sentence_list) < MAX_WORDS and not has_period:
-    punct_spacing = " "
-
-    context_string = " ".join(current_context_list)
-    probabilities = interpolated_probability(context_string)
-    smaller_sorted_probabilities = apply_p_word_sampling(probabilities, P_WORD_LIMIT)
-
-    if not smaller_sorted_probabilities:
-        print("No data found. Try a different phrase.")
-        break
-    else:
-        sampled_num = random.random()
-        next_word, next_word_index, curr_range, new_context_list = generate_next_word(smaller_sorted_probabilities, sampled_num, current_context_list)
-        if next_word in string.punctuation:
-            punct_spacing = ""
-        print(punct_spacing + next_word, end="", flush=True)        
-        time.sleep(0.062)
-        generated_sentence_list.append(next_word)
-        current_context_list = new_context_list
-
-        if next_word == ".":
-            has_period = True
+if __name__ == "__main__":
+    main()
 
 # sentence = " ".join(generated_sentence_list)
 # sentence = re.sub(r"\s+([,.])", r"\1", sentence)
